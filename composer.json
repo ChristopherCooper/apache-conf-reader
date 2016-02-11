@@ -1,0 +1,29 @@
+{
+  "name": "chriscooper/apache-conf-reader",
+  "description": "Apache config file lexer / parser",
+  "minimum-stability": "dev",
+  "authors": [
+    {
+      "name": "Chris Cooper",
+      "email": "chriscooper207@gmail.com"
+    }
+  ],
+  "require": {
+    "nikic/phlexy": "1.0.*@dev"
+  },
+  "require-dev": {
+    "symfony/console": "^3.0",
+    "phpunit/phpunit": "^5.2",
+    "mockery/mockery": "^0.9.4",
+    "fzaninotto/faker": "^1.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "ChrisCooper\\ApacheConfReader\\": "src",
+      "tests\\ChrisCooper\\ApacheConfReader\\": "tests"
+    }
+  },
+    "config": {
+        "preferred-install": "dist"
+    }
+}
