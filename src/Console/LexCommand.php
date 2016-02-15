@@ -26,6 +26,8 @@ class LexCommand extends Command
   {
     $conf = (new ApacheConfig($input->getArgument('file')))->handle();
 
+    dump($conf);
+
     $output->writeln("Done");
   }
 }

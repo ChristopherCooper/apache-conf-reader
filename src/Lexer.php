@@ -152,10 +152,7 @@ class Lexer
       }
     }
 
-      dd($config);
-
-    exit;
-    return $conf;
+    return $config;
   }
 
   protected function get_constant_name($constant_value)
