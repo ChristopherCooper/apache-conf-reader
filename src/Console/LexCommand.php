@@ -2,6 +2,8 @@
 
 use ChrisCooper\ApacheConfReader\ApacheConfig;
 use ChrisCooper\ApacheConfReader\Lexer;
+use ChrisCooper\ApacheConfReader\Nodes\Directory;
+use ChrisCooper\ApacheConfReader\Nodes\VirtualHost;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -26,7 +28,15 @@ class LexCommand extends Command
   {
     $conf = (new ApacheConfig($input->getArgument('file')))->handle();
 
-    dump($conf);
+    /** @var \ChrisCooper\ApacheConfReader\Nodes\VirtualHost $virtual_host */
+    foreach ($conf['VirtualHosts'] as $virtual_host) {
+      print_r($virtual_host);
+    }
+
+    /** @var \ChrisCooper\ApacheConfReader\Nodes\Directory $directory */
+    foreach ($conf['Directories'] as $directory) {
+      print_r($directory);
+    }
 
     $output->writeln("Done");
   }
