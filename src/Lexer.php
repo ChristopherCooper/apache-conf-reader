@@ -2,6 +2,7 @@
 
 use ChrisCooper\ApacheConfReader\Nodes\Directory;
 use ChrisCooper\ApacheConfReader\Nodes\Node;
+use ChrisCooper\ApacheConfReader\Nodes\Rewrite;
 use ChrisCooper\ApacheConfReader\Nodes\VirtualHost;
 use Illuminate\Support\Collection;
 use Phlexy\LexerFactory\Stateless\UsingPregReplace;
@@ -49,8 +50,11 @@ class Lexer
 
     $current_node = static::T_ROOT;
 
-    /** @var Node $node */
+    /** @var Node|null $node */
     $node = null;
+
+    /** @var Rewrite|null $rewrite */
+    $rewrite = null;
 
     $variable_key = $variable_value = null;
 
@@ -142,7 +146,30 @@ class Lexer
                 );
               }
 
-              $node[$variable_key] = $variable_value;
+              if (in_array($variable_key, ['RewriteCond', 'RewriteRule'])) {
+                $rewrite || $rewrite = new Rewrite();
+
+                switch ($variable_key) {
+                  case 'RewriteCond':
+                    $rewrite->conditions[] = $variable_value;
+                    break;
+                  case 'RewriteRule':
+                    $rewrite->rules[] = $variable_value;
+
+                    if (preg_match('/,?L\]$/', $variable_value)) {
+                      $node['Rewrite'] = $rewrite;
+                      $rewrite = null;
+                    }
+                    break;
+                }
+              } else {
+                if ($rewrite !== null) {
+                  $node['Rewrite'] = $rewrite;
+                  $rewrite = null;
+                }
+
+                $node[$variable_key] = $variable_value;
+              }
 
               $variable_key = $variable_value = null;
               $current_node = static::T_NODE_OPEN;
