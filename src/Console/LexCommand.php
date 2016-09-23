@@ -30,12 +30,12 @@ class LexCommand extends Command
 
     /** @var \ChrisCooper\ApacheConfReader\Nodes\VirtualHost $virtual_host */
     foreach ($conf['VirtualHosts'] as $virtual_host) {
-      print_r($virtual_host);
+      dump($virtual_host);
     }
 
     /** @var \ChrisCooper\ApacheConfReader\Nodes\Directory $directory */
     foreach ($conf['Directories'] as $directory) {
-      print_r($directory);
+      dump($directory);
     }
 
     $output->writeln("Done");

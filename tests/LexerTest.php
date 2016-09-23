@@ -14,7 +14,7 @@ use ChrisCooper\ApacheConfReader\ApacheConfig;
 class LexerTest extends \PHPUnit_Framework_TestCase
 {
 
-  public function test_succesful_simple_conf()
+  public function test_successful_simple_conf()
   {
     $conf = new ApacheConfig('stubs/simple.conf');
 

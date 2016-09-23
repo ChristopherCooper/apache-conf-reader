@@ -25,6 +25,8 @@ class Lexer
   /** @var \Phlexy\Lexer\Stateless\UsingPregReplace */
   public $lexer;
 
+  protected $regexs = [];
+
   public function __construct()
   {
     $this->regexs = [
