@@ -66,14 +66,14 @@ class Lexer
     ]);
 
     foreach ($tokens as $token) {
-      $line_context = " (Line #".$token[1].")";
+      $line_context = " (".$filename."#".$token[1].")";
       switch ($token[0]) {
         /** Nodes */
         case static::T_NODE_OPEN:
           if (!in_array($current_node, [static::T_ROOT])) {
             throw new SyntaxErrorException(
-              'Syntax error, expected T_ROOT'.
-              $this->get_constant_name($current_node).$line_context
+              'Syntax error, expected T_ROOT given '.
+              $this->get_constant_name($current_node).' '.$line_context
             );
           }
           switch ($token[3][1]) {
