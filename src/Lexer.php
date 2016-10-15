@@ -1,6 +1,7 @@
 <?php namespace ChrisCooper\ApacheConfReader;
 
 use ChrisCooper\ApacheConfReader\Nodes\Directory;
+use ChrisCooper\ApacheConfReader\Nodes\IfModule;
 use ChrisCooper\ApacheConfReader\Nodes\Node;
 use ChrisCooper\ApacheConfReader\Nodes\Rewrite;
 use ChrisCooper\ApacheConfReader\Nodes\VirtualHost;
@@ -50,30 +51,47 @@ class Lexer
 
     $tokens = $this->lexer->lex(file_get_contents($filename));
 
-    $current_node = static::T_ROOT;
+    $current_node = [
+      static::T_ROOT
+    ];
+    $current_node_level = 0;
 
     /** @var Node|null $node */
     $node = null;
+    $nodes = [];
 
     /** @var Rewrite|null $rewrite */
     $rewrite = null;
 
     $variable_key = $variable_value = null;
 
-    $config = new Collection([
-      'VirtualHosts' => new Collection([]),
-      'Directories' => new Collection([]),
-    ]);
+    $config = new Collection([]);
 
     foreach ($tokens as $token) {
       $line_context = " (".$filename."#".$token[1].")";
       switch ($token[0]) {
         /** Nodes */
         case static::T_NODE_OPEN:
-          if (!in_array($current_node, [static::T_ROOT])) {
+          if (
+            (
+              !in_array($current_node[$current_node_level], [static::T_ROOT]) &&
+              in_array($token[3][1], ['VirtualHost', 'Directory'])
+            )
+          ) {
             throw new SyntaxErrorException(
-              'Syntax error, expected T_ROOT given '.
-              $this->get_constant_name($current_node).' '.$line_context
+              'Syntax error, expected T_ROOT given [Node: '.$token[3][1].'] '.
+              $this->get_constant_name($current_node[$current_node_level]).' '.$line_context
+            );
+          }
+          if (
+            (
+              !in_array($current_node[$current_node_level], [static::T_NODE_OPEN]) &&
+              in_array($token[3][1], ['IfModule'])
+            )
+          ) {
+            throw new SyntaxErrorException(
+              'Syntax error, expected T_NODE_OPEN given [Node: '.$token[3][1].'] '.
+              $this->get_constant_name($current_node[$current_node_level]).' '.$line_context
             );
           }
           switch ($token[3][1]) {
@@ -83,46 +101,55 @@ class Lexer
             case 'Directory':
               $node = new Directory($token['3']['2']);
               break;
+            case 'IfModule':
+              if (empty($node) || ! $node instanceof Node) {
+                throw new SyntaxErrorException('No current node defined '.$line_context);
+              }
+              $nodes[$current_node_level] = $node;
+
+              $current_node_level++;
+              $node = new IfModule($token['3']['2']);
+              break;
           }
-          $current_node = static::T_NODE_OPEN;
+          $current_node[$current_node_level] = static::T_NODE_OPEN;
           break;
         case static::T_NODE_CLOSE:
-          if (!in_array($current_node, [static::T_NODE_OPEN])) {
-            throw new SyntaxErrorException(
-              'Syntax error, expected T_NODE_OPEN given '.
-              $this->get_constant_name($current_node).$line_context
-            );
-          }
+          if ($current_node_level > 0) {
+            $current_node_level--;
+            $nodes[$current_node_level]->children[] = $node;
+            $node = $nodes[$current_node_level];
+            unset($nodes[$current_node_level]);
+          } else {
+            if (!in_array($current_node[$current_node_level], [static::T_NODE_OPEN])) {
+              throw new SyntaxErrorException(
+                'Syntax error, expected T_NODE_OPEN given '.
+                $this->get_constant_name($current_node[$current_node_level]).$line_context
+              );
+            }
 
-          switch ($token[3][1]) {
-            case 'VirtualHost':
-              $config['VirtualHosts'][] = $node;
-              break;
-            case 'Directory':
-              $config['Directories'][] = $node;
-              break;
+            $config[] = $node;
+            $current_node[$current_node_level] = static::T_ROOT;
+            unset($node);
           }
-          $current_node = static::T_ROOT;
-          unset($node);
           break;
         case static::T_VARIABLE:
-          if (!in_array($current_node, [static::T_NODE_OPEN])) {
+          if (!in_array($current_node[$current_node_level], [static::T_NODE_OPEN])) {
             throw new SyntaxErrorException(
               'Syntax error, expected T_NODE_OPEN given '.
-              $this->get_constant_name($current_node).$line_context
+              $this->get_constant_name($current_node[$current_node_level]).$line_context
             );
           }
 
           $variable_key = trim($token[3][1]);
           $variable_value = trim($token[3][2]);
 
-          $current_node = static::T_VARIABLE;
+          $current_node[$current_node_level] = static::T_VARIABLE;
           break;
         case static::T_CONTINUE_VARIABLE:
-          if (!in_array($current_node, [static::T_VARIABLE])) {
+          if (!in_array($current_node[$current_node_level], [static::T_VARIABLE])) {
             throw new SyntaxErrorException(
               'Syntax error, expected T_VARIABLE given '.
-              $this->get_constant_name($current_node).$line_context
+              $this->get_constant_name($current_node[$current_node_level]).$line_context
             );
           }
           if ($variable_key === null || $variable_value === null) {
@@ -135,7 +162,7 @@ class Lexer
 
           break;
         case static::T_LINEBREAK:
-          switch ($current_node) {
+          switch ($current_node[$current_node_level]) {
             case static::T_VARIABLE:
               if ($variable_key === null || $variable_value === null) {
                 throw new SyntaxErrorException(
@@ -174,11 +201,19 @@ class Lexer
               }
 
               $variable_key = $variable_value = null;
-              $current_node = static::T_NODE_OPEN;
+              $current_node[$current_node_level] = static::T_NODE_OPEN;
               break;
           }
           break;
       }
+    }
+
+    if ($current_node[0] != static::T_ROOT) {
+      $line_context = " (".$filename."#EOF)";
+      throw new SyntaxErrorException(
+        'Syntax error, expected T_ROOT given '.
+        $this->get_constant_name($current_node[0]).$line_context
+      );
     }
 
     return $config;

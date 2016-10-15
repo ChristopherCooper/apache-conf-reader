@@ -1,6 +1,7 @@
 {
   "name": "chriscooper/apache-conf-reader",
   "description": "Apache config file lexer / parser",
+  "version": "0.1.1",
   "minimum-stability": "dev",
   "authors": [
     {
